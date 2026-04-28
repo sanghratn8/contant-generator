@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && 
+             data.userId == request.auth.uid && 
+             request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- TRENDS ---
+    function isValidTrend(data) {
+      return data.keys().hasAll(['name', 'growth_score', 'approved', 'userId', 'niche', 'createdAt']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.growth_score is number &&
+             data.approved is bool &&
+             data.userId == request.auth.uid &&
+             data.niche is string &&
+             data.createdAt is string &&
+             (!data.keys().hasAny(['history']) || data.history is list) &&
+             (!data.keys().hasAny(['search_volume']) || data.search_volume is string) &&
+             (!data.keys().hasAny(['competition_level']) || data.competition_level is string) &&
+             (!data.keys().hasAny(['country']) || data.country is string) &&
+             (!data.keys().hasAny(['sources']) || data.sources is list);
+    }
+
+    match /trends/{trendId} {
+      allow get: if isOwner(resource.data);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid && request.auth.token.email_verified == true;
+      allow create: if isSignedIn() && request.auth.token.email_verified == true && isValidTrend(request.resource.data);
+      allow update: if isOwner(resource.data) && isValidTrend(request.resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approved', 'growth_score', 'name', 'history']);
+      allow delete: if isOwner(resource.data);
+    }
+
+    // --- KEYWORDS ---
+    function isValidKeyword(data) {
+      return data.keys().hasAll(['keyword', 'difficulty', 'intent', 'trendId', 'selected', 'userId', 'createdAt']) &&
+             data.keyword is string && data.keyword.size() <= 200 &&
+             data.difficulty is number &&
+             data.intent is string &&
+             data.trendId is string &&
+             data.selected is bool &&
+             data.userId == request.auth.uid &&
+             (!data.keys().hasAny(['volume']) || data.volume is number) &&
+             (!data.keys().hasAny(['cpc']) || data.cpc is number) &&
+             (!data.keys().hasAny(['competition_count']) || data.competition_count is number) &&
+             (!data.keys().hasAny(['volume_history']) || data.volume_history is list);
+    }
+
+    match /keywords/{keywordId} {
+      allow get: if isOwner(resource.data);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid && request.auth.token.email_verified == true;
+      allow create: if isSignedIn() && request.auth.token.email_verified == true && isValidKeyword(request.resource.data);
+      allow update: if isOwner(resource.data) && isValidKeyword(request.resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['selected']);
+      allow delete: if isOwner(resource.data);
+    }
+
+    // --- PRODUCTS ---
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() <= 200 &&
+             data.rating is number &&
+             data.affiliate_link is string &&
+             data.keywordId is string &&
+             data.selected is bool &&
+             data.userId == request.auth.uid &&
+             (!data.keys().hasAny(['profit_score']) || data.profit_score is number) &&
+             (!data.keys().hasAny(['price']) || data.price is string) &&
+             (!data.keys().hasAny(['platform']) || data.platform is string) &&
+             (!data.keys().hasAny(['original_name']) || data.original_name is string) &&
+             (!data.keys().hasAny(['image_url']) || data.image_url is string);
+    }
+
+    match /products/{productId} {
+      allow get: if isOwner(resource.data);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid && request.auth.token.email_verified == true;
+      allow create: if isSignedIn() && request.auth.token.email_verified == true && isValidProduct(request.resource.data) && 
+                      request.resource.data.keys().hasAll(['name', 'rating', 'affiliate_link', 'keywordId', 'selected', 'userId', 'createdAt']);
+      allow update: if isOwner(resource.data) && isValidProduct(request.resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasAny(['selected', 'affiliate_link', 'profit_score', 'image_url', 'price', 'platform']);
+      allow delete: if isOwner(resource.data);
+    }
+
+    // --- ARTICLES ---
+    function isValidArticle(data) {
+      return data.keys().hasAll(['title', 'content', 'keywordId', 'productId', 'approved', 'published', 'url', 'userId', 'createdAt']) &&
+             data.title is string && data.title.size() <= 500 &&
+             data.content is string && data.content.size() <= 50000 &&
+             data.keywordId is string &&
+             data.productId is string &&
+             data.approved is bool &&
+             data.published is bool &&
+             data.userId == request.auth.uid &&
+             (!data.keys().hasAny(['image_url']) || data.image_url is string);
+    }
+
+    match /articles/{articleId} {
+      allow get: if isOwner(resource.data);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidArticle(request.resource.data);
+      allow update: if isOwner(resource.data) && isValidArticle(request.resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasAny(['approved', 'published', 'url', 'content', 'title', 'image_url']);
+      allow delete: if isOwner(resource.data);
+    }
+
+    // --- SOCIAL POSTS ---
+    function isValidSocialPost(data) {
+      return data.keys().hasAll(['platform', 'content', 'articleId', 'userId', 'createdAt']) &&
+             data.platform in ['Pinterest', 'Instagram', 'Facebook'] &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.articleId is string &&
+             data.userId == request.auth.uid;
+    }
+
+    match /social_posts/{postId} {
+      allow get: if isOwner(resource.data);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidSocialPost(request.resource.data);
+      allow update: if isOwner(resource.data) && isValidSocialPost(request.resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasAny(['scheduledAt', 'isScheduled']);
+      allow delete: if isOwner(resource.data);
+    }
+  }
+}

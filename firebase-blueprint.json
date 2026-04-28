@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "Trend": {
+      "title": "Trend",
+      "description": "Trending topics discovered in a niche",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "growth_score": { "type": "number" },
+        "growth_description": { "type": "string" },
+        "search_volume": { "type": "string" },
+        "competition_level": { "type": "string" },
+        "country": { "type": "string" },
+        "sources": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "approved": { "type": "boolean" },
+        "niche": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "growth_score", "approved", "userId"]
+    },
+    "Keyword": {
+      "title": "Keyword",
+      "description": "Keywords researched for an approved trend",
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string" },
+        "difficulty": { "type": "number" },
+        "intent": { "type": "string" },
+        "trendId": { "type": "string" },
+        "selected": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["keyword", "difficulty", "intent", "trendId", "selected", "userId"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Products selected for a specific keyword",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "rating": { "type": "number" },
+        "image_url": { "type": "string" },
+        "affiliate_link": { "type": "string" },
+        "profit_score": { "type": "number" },
+        "keywordId": { "type": "string" },
+        "selected": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "rating", "keywordId", "selected", "userId"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "SEO Content generated for a product",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "keywordId": { "type": "string" },
+        "productId": { "type": "string" },
+        "approved": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "url": { "type": "string" },
+        "image_url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["title", "content", "keywordId", "productId", "approved", "published", "userId"]
+    },
+    "SocialPost": {
+      "title": "SocialPost",
+      "description": "Social media content generated for an article",
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string", "enum": ["Pinterest", "Instagram", "Facebook"] },
+        "content": { "type": "string" },
+        "articleId": { "type": "string" },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "isScheduled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["platform", "content", "articleId", "userId"]
+    }
+  },
+  "firestore": {
+    "trends": {
+      "schema": "Trend",
+      "description": "Collection of trends"
+    },
+    "keywords": {
+      "schema": "Keyword",
+      "description": "Collection of keywords"
+    },
+    "products": {
+      "schema": "Product",
+      "description": "Collection of products"
+    },
+    "articles": {
+      "schema": "Article",
+      "description": "Collection of articles"
+    },
+    "social_posts": {
+      "schema": "SocialPost",
+      "description": "Collection of social media posts"
+    }
+  }
+}
